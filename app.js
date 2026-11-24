@@ -29,7 +29,7 @@ const btn=(a,label,icon,cls='btn',attrs='')=>'<button type="button" class="'+cls
 const round=(a,label,icon,attrs='')=>btn(a,'',icon,'round','aria-label="'+escapeHtml(label)+'" title="'+escapeHtml(label)+'" '+attrs);
 const KEY='kitten-club-classrooms-v1';
 let data,readProblem='',lastSaved=null;
-try {const raw=localStorage.getItem(KEY);if(raw){lastSaved=raw;const parsed=JSON.parse(raw);if(!Club.valid(parsed))throw Error();data=parsed;}}
+try {const raw=localStorage.getItem(KEY);if(raw){lastSaved=raw;data=Club.readClassrooms(raw);}}
 catch{readProblem='Your saved classroom could not be opened. Restore a backup in Settings.';}
 if(!data)data=Club.initial();
 let view=['board','room','shop','noise'].includes(location.hash.slice(1))?location.hash.slice(1):'board';
@@ -39,7 +39,7 @@ const pantrySelection=new Map();
 let turns=null,turnTimer,storageBlocked=Boolean(readProblem);
 const getClass=()=>data.classes.find(c=>c.id===data.active);
 const findStudent=id=>getClass().students.find(s=>s.id===id);
-const coats=['Ginger tabby','Silver tabby','Tuxedo','Cream','Calico','Siamese'];
+let lookDraft=null;
 const todayLabel=()=>new Intl.DateTimeFormat(undefined,{weekday:'long',month:'long',day:'numeric'}).format(new Date());
 const titleMap={board:'Classroom board',room:'Pet room',shop:'Reward shop',noise:'Noise monitor'};
 function notify(msg){const el=$('#toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2400);}
@@ -49,29 +49,26 @@ function save(){
  try{
    const raw=localStorage.getItem(KEY);
    if(raw && raw!==lastSaved){
-     const latest=JSON.parse(raw);
-     if(Club.valid(latest)){
-       data=latest;lastSaved=raw;closeModal();stopTurns();render();
-       notify('Another tab updated this classroom. Please repeat your change.');
-       return;
-     }
+     data=Club.readClassrooms(raw);lastSaved=raw;closeModal();stopTurns();render();
+     notify('Another tab updated this classroom. Please repeat your change.');
+     return;
    }
    const serialized=JSON.stringify(data);localStorage.setItem(KEY,serialized);lastSaved=serialized;storageMessage('');
  }catch{storageMessage('This browser could not save your changes. Download a backup in Settings.');}
 }
-function petImage(kind,coat){return 'assets/'+(kind==='kitten'?'kitten-'+coat:'pet-'+kind)+'.webp';}
 const strappedAccessories=new Set(['bow','butterfly','medal','compass','camera']);
 function kitten(student, preview) {
   const kind=Club.petOf(student);
   if(!kind)return '<span class="pet-placeholder" aria-label="Choose a pet">'+ic('paw',40)+'</span>';
   const accessory=preview && preview.slot!=='clothing'?preview.id:student.worn;
   const clothing=preview?.slot==='clothing'?preview.id:student.clothing;
-  const coat=student.coat;
+  const look=Club.lookOf(student);
+  const coat=kind==='kitten'?look%Club.paletteCount:student.coat;
   const garment=clothing?'<span class="wear fitted-garment wear-'+clothing+'" aria-hidden="true"></span>':'';
   const strap=strappedAccessories.has(accessory)?'<span class="wear-strap" aria-hidden="true"></span>':'';
   const accessoryImage=accessory?'<img draggable="false" class="wear wear-'+accessory+'" src="assets/accessory-'+accessory+'.webp" alt="">':'';
   return '<span class="kitten-art" data-species="'+kind+'" data-coat="'+coat+'" data-worn="'+(accessory||'')+'" data-clothing="'+(clothing||'')+'">'+
-    '<img draggable="false" class="pet-img" src="'+petImage(kind,coat)+'" alt="">'+garment+strap+accessoryImage+'</span>';
+    PetArt.image(kind,look)+garment+strap+accessoryImage+'</span>';
 }
 function moodPill(s){const m=Club.moods[s.mood];return '<span class="mood mood-'+s.mood+'">'+ic(m.icon,14)+m.name+'</span>';}
 function wallet(n){return '<span class="wallet">'+ic('paw',16)+'<b>'+n+'</b> <span>paw '+(n===1?'point':'points')+'</span></span>';}
@@ -222,6 +219,7 @@ function render(){
  $('#content').innerHTML=(view==='board'?board(c):view==='room'?room(c):view==='noise'?NoiseMeter.page(c):shop(c))+
  '<footer><span>'+ic('paw',15)+'Class Pets</span><button data-action="classes">'+escapeHtml(c.name)+(c.demo?' · Demo class':'')+'</button></footer>';
  if(view==='shop' && document.body.classList.contains('projector'))$('#content').insertAdjacentHTML('afterbegin',btn('fullscreen','Exit projector','full','btn quiet'));
+ PetArt.paint($('#content'));
  if(view==='noise')NoiseMeter.paint();
  updateTurnClock();
 }
@@ -229,14 +227,57 @@ const dlg=$('#dialog');
 const footerButton=(label)=>'<button class="btn primary" type="submit">'+label+'</button>';
 const dialogHead=(title)=>'<div class="dialog-head"><h2 id="dialog-title">'+title+'</h2>'+round('close','Close dialog','x')+'</div>';
 const field=(label,input)=>'<label class="field"><span>'+label+'</span>'+input+'</label>';
+function suggestedLook(s,kind,available){
+  const current=Club.lookOf(s);
+  if(Club.petOf(s)===kind&&available.includes(current))return current;
+  const coat=kind==='kitten'?available.find(look=>look%Club.paletteCount===s.coat):undefined;
+  return coat??available[0];
+}
 function petPicker(s){
   const current=Club.petOf(s);
   const choices=Object.entries(Club.species).map(([id,label])=>{
-    const image='<img src="'+petImage(id,s.coat)+'" alt=""><span>'+label+'</span>';
+    const look=suggestedLook(s,id,Club.availableLooks(getClass(),s.id,id));
+    const image=PetArt.image(id,look)+'<span>'+label+'</span>';
     return btn('pick-species',image,'','animal-choice','data-id="'+s.id+'" data-species="'+id+'" aria-pressed="'+(current===id)+'"');
   });
   return dialogHead('Choose a pet for '+escapeHtml(s.name))+
-    '<p>Select an animal to bring it into the pet room. Points and outfits stay with the student.</p><div class="species-picker">'+choices.join('')+'</div>';
+    '<p>Choose an animal, then pick its colors and markings.</p><div class="species-picker">'+choices.join('')+'</div>';
+}
+function paletteLook(available,selected,palette){
+  const marking=Math.floor(selected/Club.paletteCount);
+  const preferred=marking*Club.paletteCount+palette;
+  return available.includes(preferred)?preferred:available.find(look=>look%Club.paletteCount===palette);
+}
+function lookPicker(s){
+  const kind=lookDraft.kind, available=Club.availableLooks(getClass(),s.id,kind);
+  const selected=available.includes(lookDraft.look)?lookDraft.look:suggestedLook(s,kind,available);
+  lookDraft.look=selected;
+  const palette=selected%Club.paletteCount, marking=Math.floor(selected/Club.paletteCount);
+  const colors=PetArt.paletteNames(kind).map((name,i)=>{
+    const look=paletteLook(available,selected,i);
+    const thumbnail=PetArt.image(kind,look??i);
+    return btn('pick-color',thumbnail+'<span>'+escapeHtml(name)+'</span>','','look-color',
+      'data-palette="'+i+'" aria-pressed="'+(i===palette)+'" '+(look===undefined?'disabled':''));
+  }).join('');
+  const patterns=PetArt.markingNames(kind).map((name,i)=>{
+    const id=i*Club.paletteCount+palette, free=available.includes(id);
+    return '<option value="'+id+'" '+(i===marking?'selected ':'')+(free?'':'disabled')+'>'+escapeHtml(name)+(free?'':' (in use)')+'</option>';
+  }).join('');
+  const label=Club.species[kind].toLowerCase();
+  const preview=kitten({...s,species:kind,look:selected});
+  return dialogHead('Choose your '+label+'’s look')+
+    '<div class="look-preview"><div class="look-portrait" role="img" aria-label="'+escapeHtml(PetArt.name(kind,selected))+'">'+preview+'</div>'+
+    '<div><h3>'+escapeHtml(PetArt.paletteNames(kind)[palette])+'</h3><p>'+escapeHtml(PetArt.markingNames(kind)[marking])+'</p></div></div>'+
+    '<fieldset class="look-colors"><legend>Color</legend><div>'+colors+'</div></fieldset>'+
+    field('Markings','<select id="look-marking">'+patterns+'</select>')+
+    '<p class="look-help">Each classmate gets a different look.</p><div class="dialog-actions split">'+
+    btn('choose-pet','Back to animals','','btn light','data-id="'+s.id+'"')+
+    btn('save-look','Save this look','check','btn primary','data-id="'+s.id+'"')+'</div>';
+}
+function refreshLookPicker(selector){
+ const scroll=dlg.scrollTop;
+ dlg.innerHTML=modalContent();PetArt.paint(dlg);dlg.scrollTop=scroll;
+ dlg.querySelector(selector)?.focus({preventScroll:true});
 }
 function decorDialog(c){
   return dialogHead('Pet room toys')+'<p>Choose toys for the room. Decorating is free.</p><div class="toy-picker">'+Club.items.filter(item=>item.kind==='room').map(item=>{
@@ -248,16 +289,25 @@ async function changePetOrShop(action,classId,studentId,choice){
   function commit(){
     if(storageBlocked)throw Error();
     const raw=localStorage.getItem(KEY);
-    const next=raw&&raw!==lastSaved?JSON.parse(raw):JSON.parse(JSON.stringify(data));
-    if(!Club.valid(next))throw Error();
+    const next=Club.readClassrooms(raw&&raw!==lastSaved?raw:JSON.stringify(data));
     const c=next.classes.find(entry=>entry.id===classId);
     if(!c||next.active!==classId){notify('The classroom changed. Open it again to continue.');return;}
     const student=c.students.find(entry=>entry.id===studentId);
     let message;
-    if(action==='pick-species'){
+    if(action==='save-look'){
       if(!student||!Object.hasOwn(Club.species,choice.species))return;
-      student.species=choice.species;
-      message=student.name+' chose a '+Club.species[choice.species].toLowerCase()+'.';
+      if(!Club.choosePet(c,student,choice.species,choice.look)){
+        data=next;lastSaved=raw;render();
+        const message='Another classmate chose this look. Pick an available one.';
+        if(modal==='pick-look'&&modalId===studentId&&lookDraft?.kind===choice.species){
+          refreshLookPicker('#look-marking');
+          const help=dlg.querySelector('.look-help');
+          help.textContent=message;
+          help.setAttribute('role','alert');
+        }else notify(message);
+        return;
+      }
+      message=student.name+'’s '+Club.species[choice.species].toLowerCase()+' is ready.';
     }else if(action==='buy-food'){
       const meal=Club.meals.find(item=>item.id===choice.meal);
       if(turns||!Club.buyMeal(c,meal)){notify('Check the class food balance.');return;}
@@ -278,11 +328,11 @@ async function changePetOrShop(action,classId,studentId,choice){
     const saved=JSON.stringify(next);
     localStorage.setItem(KEY,saved);data=next;lastSaved=saved;storageMessage('');
     if(action==='buy-food')pantrySelection.set(c.id,choice.meal);
-    if(action==='pick-species')closeModal();
+    if(action==='save-look')closeModal();
     if(action==='feed'){
       servingClass=c.id;servingFood=choice.meal==='saved'?'snack':choice.meal;servingUntil=Date.now()+6500;go('room');
     }else updateUi();
-    if(action==='pick-species')focusAttr('choose-pet',studentId);
+    if(action==='save-look')focusAttr('choose-pet',studentId);
     else if(choice.item||choice.meal){
       const root=dlg.open?dlg:document;
       root.querySelector(choice.item?'[data-item="'+choice.item+'"]':'[data-meal="'+choice.meal+'"]')?.focus({preventScroll:true});
@@ -295,14 +345,20 @@ async function changePetOrShop(action,classId,studentId,choice){
   }catch{notify('This change could not be saved. Check browser storage and try again.');}
 }
 function studentDialog(s){
- const name=escapeHtml(s.name);
- return dialogHead(name+'’s '+(Club.species[Club.petOf(s)]||'pet').toLowerCase())+'<div class="pet-summary tone-'+s.coat+'"><div class="pet-tile">'+kitten(s)+'</div><div>'+moodPill(s)+'<p>'+Club.moods[s.mood].msg+'</p>'+wallet(s.points)+'<p class="meal-history">'+(s.mealsEaten||0)+' shared '+(s.mealsEaten===1?'meal':'meals')+' enjoyed</p>'+btn('choose-pet',Club.petOf(s)?'Change pet':'Choose a pet','','btn light','data-id="'+s.id+'"')+'</div></div><h3>Check-in mood</h3><div class="mood-options">'+Club.moods.map((m,i)=>btn('set-mood',m.name,m.icon,'mood-choice '+(s.mood===i?'chosen':''),'aria-pressed="'+(s.mood===i)+'" data-level="'+i+'" data-id="'+s.id+'"')).join('')+'</div><div class="dialog-actions">'+btn('give','Award 1 paw point','paw','btn primary','data-id="'+s.id+'"')+btn('dress','Dress pet','gift','btn light','data-id="'+s.id+'"')+'</div>';
+ const name=escapeHtml(s.name),kind=Club.petOf(s);
+ const appearance=kind?'<p class="pet-look-name">'+escapeHtml(PetArt.name(kind,Club.lookOf(s)))+'</p>':'';
+ return dialogHead(name+'’s '+(Club.species[Club.petOf(s)]||'pet').toLowerCase())+'<div class="pet-summary tone-'+s.coat+'"><div class="pet-tile">'+kitten(s)+'</div><div>'+appearance+moodPill(s)+'<p>'+Club.moods[s.mood].msg+'</p>'+wallet(s.points)+'<p class="meal-history">'+(s.mealsEaten||0)+' shared '+(s.mealsEaten===1?'meal':'meals')+' enjoyed</p>'+btn('choose-pet',Club.petOf(s)?'Change pet':'Choose a pet','','btn light','data-id="'+s.id+'"')+'</div></div><h3>Check-in mood</h3><div class="mood-options">'+Club.moods.map((m,i)=>btn('set-mood',m.name,m.icon,'mood-choice '+(s.mood===i?'chosen':''),'aria-pressed="'+(s.mood===i)+'" data-level="'+i+'" data-id="'+s.id+'"')).join('')+'</div><div class="dialog-actions">'+btn('give','Award 1 paw point','paw','btn primary','data-id="'+s.id+'"')+btn('dress','Dress pet','gift','btn light','data-id="'+s.id+'"')+'</div>';
 }
 function rosterDialog(c){
  return dialogHead('Manage students')+'<p>'+escapeHtml(c.name)+' · '+c.students.length+' of 35 students</p><form id="students-form">'+field('Add student names','<textarea name="names" rows="3" maxlength="2834" placeholder="One name per line" required></textarea>')+'<div class="form-foot"><span class="error" role="alert"></span>'+footerButton('Add students')+'</div></form><div class="list">'+c.students.map(s=>'<div class="list-row"><span class="mini-pet">'+kitten(s)+'</span><b>'+escapeHtml(s.name)+'</b>'+round('edit','Edit '+s.name,'edit','data-id="'+s.id+'"')+'</div>').join('')+'</div>';
 }
 function editDialog(s){
- return dialogHead('Edit student')+'<form id="edit-form">'+field('Student name','<input name="name" value="'+escapeHtml(s.name)+'" maxlength="40" required>')+(Club.petOf(s)==='kitten'?'<h3>Kitten coat</h3><div class="coat-grid">'+coats.map((x,i)=>'<label><input type="radio" name="coat" aria-label="'+x+'" value="'+i+'" '+(s.coat===i?'checked':'')+'><span><img src="assets/kitten-'+i+'.webp" alt="'+x+'"></span></label>').join('')+'</div>':'')+'<div class="dialog-actions split">'+btn('remove-confirm','Remove student','trash','btn danger','data-id="'+s.id+'"')+footerButton('Save changes')+'</div><p class="error" role="alert"></p></form>';
+ const available=Club.availableLooks(getClass(),s.id,'kitten');
+ const kittenCoats=Club.petOf(s)==='kitten'?PetArt.paletteNames('kitten').map((name,i)=>{
+   const look=paletteLook(available,Club.lookOf(s),i);
+   return '<label><input type="radio" name="coat" aria-label="'+escapeHtml(name)+'" value="'+i+'" '+(i===s.coat?'checked ':'')+(look===undefined?'disabled':'')+'><span>'+PetArt.image('kitten',look??i)+'</span></label>';
+ }).join(''):'';
+ return dialogHead('Edit student')+'<form id="edit-form">'+field('Student name','<input name="name" value="'+escapeHtml(s.name)+'" maxlength="40" required>')+(kittenCoats?'<h3>Kitten coat</h3><div class="coat-grid">'+kittenCoats+'</div>':'')+'<div class="dialog-actions split">'+btn('remove-confirm','Remove student','trash','btn danger','data-id="'+s.id+'"')+footerButton('Save changes')+'</div><p class="error" role="alert"></p></form>';
 }
 function classesDialog(c){
  return dialogHead('Your classrooms')+'<div class="class-list">'+data.classes.map(k=>'<button class="class-choice" data-action="switch-class" data-id="'+k.id+'">'+ic('school')+'<span><b>'+escapeHtml(k.name)+'</b><small>'+k.students.length+' students'+(k.demo?' · Demo class':'')+'</small></span>'+(k.id===c.id?ic('check'):'')+'</button>').join('')+'</div>'+btn('new-class','Start my own class','plus','btn primary wide');
@@ -322,6 +378,7 @@ function modalContent(){
  const c=getClass(),s=findStudent(modalId);
  switch(modal){
  case 'student':return s?studentDialog(s):rosterDialog(c);
+ case 'pick-look':return s&&lookDraft?lookPicker(s):rosterDialog(c);
  case 'choose-pet':return s?petPicker(s):rosterDialog(c);
  case 'decor':return decorDialog(c);
  case 'roster':return rosterDialog(c);
@@ -337,7 +394,7 @@ function modalContent(){
 }
 function openModal(m,id=''){
  if(!dlg.open){const b=document.activeElement;returnFocus=b?.dataset.action?{action:b.dataset.action,id:b.dataset.id}:null;}
- modal=m;modalId=id;dlg.innerHTML=modalContent();dlg.scrollTop=0;
+ modal=m;modalId=id;dlg.innerHTML=modalContent();PetArt.paint(dlg);dlg.scrollTop=0;
  if(!dlg.open)dlg.showModal();
  dlg.querySelector('h2').setAttribute('tabindex','-1');dlg.querySelector('h2').focus({preventScroll:true});
 }
@@ -345,7 +402,7 @@ function closeModal(){if(dlg.open)dlg.close();modal='';modalId='';}
 dlg.addEventListener('close',()=>{if(dlg.open)return;modal='';modalId='';if(returnFocus){focusAttr(returnFocus.action,returnFocus.id);returnFocus=null;}});
 dlg.addEventListener('click',ev=>{if(ev.target===dlg){const r=dlg.getBoundingClientRect();if(ev.clientX<r.left||ev.clientX>r.right||ev.clientY<r.top||ev.clientY>r.bottom)closeModal();}});
 function updateUi(action,id){
- const scroll=dlg.scrollTop;render();if(dlg.open){dlg.innerHTML=modalContent();dlg.scrollTop=scroll;}
+ const scroll=dlg.scrollTop;render();if(dlg.open){dlg.innerHTML=modalContent();PetArt.paint(dlg);dlg.scrollTop=scroll;}
  if(action){const root=dlg.open?dlg:document;const els=[...root.querySelectorAll('[data-action="'+action+'"]')];(els.find(b=>(!id||b.dataset.id===id)&&!b.disabled)||els.find(b=>!b.disabled))?.focus({preventScroll:true});}
 }
 // Resolve the same classroom and student against the latest saved balances.
@@ -371,8 +428,7 @@ async function awardPoints(action, classId, studentId) {
       return;
     }
     const raw = localStorage.getItem(KEY);
-    const next = raw && raw !== lastSaved ? JSON.parse(raw) : JSON.parse(JSON.stringify(data));
-    if (!Club.valid(next)) throw new Error('Invalid classroom data');
+    const next = Club.readClassrooms(raw && raw !== lastSaved ? raw : JSON.stringify(data));
     const classroom = next.classes.find(entry => entry.id === classId);
     const student = classroom?.students.find(entry => entry.id === studentId);
     if (!classroom || (action === 'give' && !student)) {
@@ -461,7 +517,24 @@ document.addEventListener('click',e=>{
  case 'dress':closeModal();shopKind='kitten';shopId=id;go('shop');break;
  case 'food-shop':shopKind='food';go('shop');break;
  case 'kitten-shop':shopKind='kitten';go('shop');break;
- case 'buy': case 'buy-food': case 'feed': case 'pick-species': case 'place-toy':{
+ case 'pick-species':{
+   const kind=el.dataset.species;
+   if(!s||!Object.hasOwn(Club.species,kind))break;
+   lookDraft={kind,look:suggestedLook(s,kind,Club.availableLooks(c,s.id,kind))};
+   openModal('pick-look',s.id);break;
+ }
+ case 'pick-color':{
+   const student=findStudent(modalId);
+   if(modal!=='pick-look'||!student)break;
+   const palette=Number(el.dataset.palette);
+   const look=paletteLook(Club.availableLooks(c,student.id,lookDraft.kind),lookDraft.look,palette);
+   if(look!==undefined){lookDraft.look=look;refreshLookPicker('[data-palette="'+palette+'"]');}
+   break;
+ }
+ case 'save-look':
+   if(modal==='pick-look'&&lookDraft&&id===modalId)void changePetOrShop(a,c.id,id,{species:lookDraft.kind,look:lookDraft.look});
+   break;
+ case 'buy': case 'buy-food': case 'feed': case 'place-toy':{
    void changePetOrShop(a,c.id,id||shopId,{item:el.dataset.item,species:el.dataset.species,meal:a==='feed'?$('#pantry-food')?.value:el.dataset.meal});break;
  }
  case 'mic-start':void NoiseMeter.start();break;
@@ -509,6 +582,9 @@ document.addEventListener('input',e=>{
  }
 });
 document.addEventListener('change',async e=>{
+ if(e.target.id==='look-marking'&&modal==='pick-look'){
+   lookDraft.look=Number(e.target.value);refreshLookPicker('#look-marking');return;
+ }
  if(e.target.id==='pantry-food'){pantrySelection.set(getClass().id,e.target.value);return;}
  if(e.target.id==='mobile-stage'){setNoiseStage(e.target.value);return;}
  if(e.target.id==='noise-target'){
@@ -523,7 +599,7 @@ document.addEventListener('change',async e=>{
  if(e.target.id==='mood-filter'){filter=e.target.value;render();$('#mood-filter').focus({preventScroll:true});}
  if(e.target.id==='shop-kitten'){shopId=e.target.value;render();$('#shop-kitten').focus({preventScroll:true});}
  if(e.target.id==='restore-file'){const file=e.target.files?.[0];e.target.value='';if(!file)return;
-   try{if(file.size>10_000_000)throw Error();const parsed=JSON.parse(await file.text());if(!Club.valid(parsed))throw Error();restoreData=parsed;openModal('restore');}
+   try{if(file.size>10_000_000)throw Error();restoreData=Club.readClassrooms(await file.text());openModal('restore');}
    catch{notify('Choose a valid Class Pets backup file.');const error=document.createElement('p');error.className='error';error.textContent='This file is not a valid Class Pets backup.';dlg.querySelector('.error')?.remove();dlg.append(error);}
  }
 });
@@ -543,7 +619,11 @@ document.addEventListener('submit',e=>{
  }
  if(form.id==='edit-form'){
    const s=findStudent(modalId),name=fields.get('name').trim();if(!name)return formError(form,'Enter a student name.');
-   s.name=name;if(fields.has('coat'))s.coat=Number(fields.get('coat'));save();render();openModal('roster');notify('Student updated.');return;
+   if(fields.has('coat')){
+     const look=paletteLook(Club.availableLooks(c,s.id,'kitten'),Club.lookOf(s),Number(fields.get('coat')));
+     if(!Club.choosePet(c,s,'kitten',look))return formError(form,'Choose an available kitten coat.');
+   }
+   s.name=name;save();render();openModal('roster');notify('Student updated.');return;
  }
  stopTurns();turns={minutes:Number(fields.get('minutes')),id:'',end:0,done:[]};turnTimer=setInterval(updateTurnClock,500);shopKind='kitten';closeModal();go('shop');
 });
@@ -553,7 +633,7 @@ window.addEventListener('storage',e=>{
  if(e.key!==KEY || !e.newValue || e.newValue===lastSaved)return;
  try{
    const current=localStorage.getItem(KEY);if(!current || current===lastSaved)return;
-   const fresh=JSON.parse(current);if(!Club.valid(fresh))return;
+   const fresh=Club.readClassrooms(current);
    const open=dlg.open;closeModal();stopTurns();if(fresh.active!==data.active)NoiseMeter.stop();data=fresh;lastSaved=current;storageBlocked=false;
    roomPage=0;filter='all';render();storageMessage('');
    if(open)notify('This classroom was updated in another tab.');

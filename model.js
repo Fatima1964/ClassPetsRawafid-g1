@@ -27,6 +27,53 @@ const Club = (() => {
     {id:'groups', name:'Group work', target:68, cue:'Keep your voice within your group.'}
   ];
   function petOf(s){ return s.species === undefined ? 'kitten' : s.species; }
+  const paletteCount=6;
+  const looks=Array.from({length:36},(_,i)=>i);
+  function lookOf(s){
+    return s.look ?? (petOf(s)==='kitten'?s.coat:0);
+  }
+  function availableLooks(c,studentId,kind){
+    const taken=new Set(c.students.filter(s=>s.id!==studentId&&petOf(s)===kind).map(lookOf));
+    return looks.filter(look=>!taken.has(look));
+  }
+  function setLook(s,kind,look){
+    s.species=kind;
+    s.look=look;
+    if(kind==='kitten')s.coat=look%paletteCount;
+  }
+  function choosePet(c,student,kind,look){
+    if(!Object.hasOwn(species,kind)||!availableLooks(c,student.id,kind).includes(look))return false;
+    setLook(student,kind,look);
+    return true;
+  }
+  function normalizeLooks(data){
+    for(const c of data.classes){
+      for(const kind of Object.keys(species)){
+        const group=c.students.filter(s=>petOf(s)===kind);
+        const reserved=new Set(), duplicates=[];
+        // Reserve saved choices first, then keep one of each original appearance.
+        for(const s of [...group.filter(s=>s.look!==undefined),...group.filter(s=>s.look===undefined)]){
+          const preferred=lookOf(s);
+          if(reserved.has(preferred)){duplicates.push(s);continue;}
+          reserved.add(preferred);
+          setLook(s,kind,preferred);
+        }
+        for(const s of duplicates){
+          const open=looks.filter(look=>!reserved.has(look));
+          const sameCoat=kind==='kitten'?open.find(look=>look%paletteCount===s.coat):undefined;
+          const look=sameCoat??open[0];
+          reserved.add(look);
+          setLook(s,kind,look);
+        }
+      }
+    }
+    return data;
+  }
+  function readClassrooms(raw){
+    const parsed=JSON.parse(raw);
+    if(!valid(parsed))throw new Error('Invalid classroom data');
+    return normalizeLooks(parsed);
+  }
   const items = [
     {id:'compass',name:'Explorer compass',price:4,file:'accessory-compass',kind:'kitten'},
     {id:'sailor',name:'Sailor cap',price:4,file:'accessory-sailor',kind:'kitten'},
@@ -66,7 +113,7 @@ const Club = (() => {
     const c=classroom('Grade 2',['Maya','Omar','Lina','Adam','Noor','Zayd'],true);
     const levels=[4,3,3,2,4,3],points=[8,5,6,4,7,5];
     c.students.forEach((s,i)=>{s.mood=levels[i];s.points=points[i];s.species=['kitten','puppy','turtle','rabbit','foal','parrot'][i];});c.points=8;
-    return {version:1,active:c.id,classes:[c],motion:true};
+    return normalizeLooks({version:1,active:c.id,classes:[c],motion:true});
   }
   function mood(s,next){
     if(!Number.isInteger(next)||next<0||next>4||s.mood===next) return false;
@@ -153,6 +200,7 @@ const Club = (() => {
       for(const s of c.students){
         if(!obj(s))return false;
         if(s.species!==undefined && s.species!==null && !Object.hasOwn(species,s.species))return false;
+        if(s.look!==undefined&&!looks.includes(s.look))return false;
         if(s.mealsEaten!==undefined&&!pts(s.mealsEaten))return false;
         if(s.lastMeal!==undefined && !(typeof s.lastMeal==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s.lastMeal)))return false;
         if(s.clothing && !(Array.isArray(s.owned)&&s.owned.includes(s.clothing)&&items.some(i=>i.id===s.clothing&&i.slot==='clothing')))return false;
@@ -162,6 +210,6 @@ const Club = (() => {
     }
     return unique(data.classes)&&data.classes.some(c=>c.id===data.active);
   }
-  return {moods,items,species,meals,foodStock,pantryFoods,stages,petOf,buyMeal,feedClass,student,classroom,initial,day,mood,roomMood,dailyEarn,classEarn,endDay,useItem,valid};
+  return {moods,items,species,paletteCount,lookOf,availableLooks,choosePet,readClassrooms,meals,foodStock,pantryFoods,stages,petOf,buyMeal,feedClass,student,classroom,initial,day,mood,roomMood,dailyEarn,classEarn,endDay,useItem,valid};
 })();
 if(typeof module!=='undefined')module.exports=Club;
