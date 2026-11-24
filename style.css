@@ -250,3 +250,9 @@ dialog::backdrop{background:#203a2f58;backdrop-filter:blur(3px)}.dialog-head{dis
   .current-cue span::before {content:" · ";}
   .monitor-readout {grid-column:1;grid-row:3;}
 }
+
+.full-room .room-decor {z-index:1;}
+@media(max-width:650px){
+  .room-stage.full-room {aspect-ratio:1;}
+  .full-room .nametag {padding:3px 5px;}
+}

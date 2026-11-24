@@ -128,32 +128,55 @@ function board(c){
  (list.length?'<div class="cards">'+list.map(card).join('')+'</div>':'<div class="empty"><h3>'+(c.students.length?'No pets in this mood':'Meet your first class pet')+'</h3><p>'+(c.students.length?'Choose another mood to see more pets.':'Add your students so each one can choose a pet.')+'</p>'+btn(c.students.length?'clear-filter':'roster',c.students.length?'Show all pets':'Add students','plus','btn light')+'</div>')+'</section>'+
  '<div class="board-foot"><div class="class-points"><span class="coin">'+ic('paw',20)+'</span><div><b>Class paw points</b><span>For food to share with every pet</span></div><strong>'+c.points+'</strong>'+classAwardButton(c)+btn('food-shop','Food pantry','food','btn light')+'</div><div class="foot-actions">'+btn('fullscreen',projectLabel(),'full','btn quiet')+btn('endday',c.lastDay===Club.day()?'Day summary':'End school day','flag','btn light')+'</div></div>';
 }
-const pointsWide=[[22,86,15],[33.8,47.9,11.4],[73.3,29.3,9.8],[85,81,14.6],[44,95,17],[65,90,15.7]];
-const pointsSmall=[[20,81,24],[37,43,18],[76,34,16],[82,79,23],[40,96,26],[61,86,24]];
+const petsPerRoomPage=10;
 const narrow=matchMedia('(max-width: 650px)');
-function room(c){
- const mood=Club.roomMood(c);const positions=narrow.matches?pointsSmall:pointsWide;
- const pets=c.students.filter(Club.petOf);
- const total=Math.max(1,Math.ceil(pets.length/positions.length));roomPage=Math.max(0,Math.min(roomPage,total-1));
- const group=pets.slice(roomPage*positions.length,(roomPage+1)*positions.length);
- const restingPet=group.find(s=>s.mood===0);
- const spots=new Map(), available=[0,3,4,5];
- const shelfSpots=[2,1];
- const canPerch=s=>['parrot','monkey','kitten'].includes(Club.petOf(s));
- for(const pet of group.filter(p=>p!==restingPet&&canPerch(p)).sort((a,b)=>Number(Club.petOf(b)==='parrot')-Number(Club.petOf(a)==='parrot'))){
-   if(shelfSpots.length)spots.set(pet.id,positions[shelfSpots.shift()]);
+// Each spot is [horizontal center, baseline, width] as a percentage of the room.
+// Special spots have floor alternatives for pets that stay on the ground.
+const roomLayouts={
+ wide:{
+  standard:{floor:[[22,86,15],[85,81,14.6],[44,95,17],[65,90,15.7],[57,70,11],[35,73,11]],quiet:[10,62,12],perches:[[73.3,29.3,9.8],[33.8,47.9,11.4]]},
+  full:{floor:[[13,69,9.5],[32,96,11],[52,94,11],[73,97,11],[93,93,10.5],[12,98,10.5],[51,65,9],[89,65,9],[70,64,9],[32,65,9]],quiet:[10,63,9],perches:[[73.3,30,8],[34,46,9]]}
+ },
+ small:{
+  standard:{floor:[[20,81,24],[82,79,23],[40,96,26],[61,86,24],[68,62,17],[35,61,18]],quiet:[15,51,19],perches:[[76,34,16],[37,43,18]]},
+  full:{floor:[[18,57,16],[12,78,16],[37,77,16],[63,77,16],[88,78,16],[21,98,17],[50,98,17],[79,98,17],[79,57,15],[49,57,15]],quiet:[15,51,16],perches:[[76,34,13],[37,43,13]]}
  }
- const extraFloor=narrow.matches?[[35,61,18],[68,62,17]]:[[35,73,11],[57,70,11]];
+};
+function roomSpots(group,layout){
+ const spots=new Map();
+ const floor=layout.floor.slice();
+ const resting=group.find(pet=>pet.mood===0);
+ if(resting){
+   spots.set(resting.id,layout.quiet);
+   floor.shift();
+ }
+ const climbers=group.filter(pet=>pet!==resting && ['parrot','monkey','kitten'].includes(Club.petOf(pet)))
+   .sort((a,b)=>Number(Club.petOf(b)==='parrot')-Number(Club.petOf(a)==='parrot'));
+ const shelfCount=Math.min(climbers.length,layout.perches.length);
+ for(let i=0;i<shelfCount;i++)spots.set(climbers[i].id,layout.perches[i]);
+ // The final two floor spots are paired with the shelves, in the same order.
+ if(shelfCount)floor.splice(floor.length-layout.perches.length,shelfCount);
  for(const pet of group){
-   if(pet===restingPet){spots.set(pet.id,narrow.matches?[15,51,19]:[10,62,12]);continue;}
-   if(!spots.has(pet.id))spots.set(pet.id,available.length?positions[available.shift()]:extraFloor.shift());
+   if(!spots.has(pet.id))spots.set(pet.id,floor.shift());
  }
+ return spots;
+}
+function room(c){
+ const mood=Club.roomMood(c);
+ const pets=c.students.filter(Club.petOf);
+ const total=Math.max(1,Math.ceil(pets.length/petsPerRoomPage));
+ roomPage=Math.max(0,Math.min(roomPage,total-1));
+ const start=roomPage*petsPerRoomPage;
+ const group=pets.slice(start,start+petsPerRoomPage);
+ const layouts=narrow.matches?roomLayouts.small:roomLayouts.wide;
+ const full=group.length>layouts.standard.floor.length;
+ const spots=roomSpots(group,full?layouts.full:layouts.standard);
  const serving=servingClass===c.id&&Date.now()<servingUntil;
  return '<section><div class="page-head"><div><div class="context">'+ic('school',17)+escapeHtml(c.name)+'</div><h1>Pet room</h1><p>Visit a pet or share a meal with the whole group.</p></div><div class="actions">'+btn('decor','Room toys','palette','btn light')+btn('food-shop','Food pantry','food','btn primary')+'</div>'+'</div>'+
- '<div class="room-stage room-'+mood.tone+'"><picture><source media="(max-width:650px)" srcset="assets/room-mobile.webp"><img class="room-bg" src="assets/room.webp" alt="Sunny pet room with a woven bed, climbing tower, and peach rug."></picture><div class="room-glow"></div><div class="room-status">'+ic(mood.icon,17)+mood.name+'</div>'+
+ '<div class="room-stage room-'+mood.tone+(full?' full-room':'')+'"><picture><source media="(max-width:650px)" srcset="assets/room-mobile.webp"><img class="room-bg" src="assets/room.webp" alt="Sunny pet room with a woven bed, climbing tower, and peach rug."></picture><div class="room-glow"></div><div class="room-status">'+ic(mood.icon,17)+mood.name+'</div>'+
  c.placed.map(id=>'<img class="room-decor decor-'+id+'" alt="'+Club.items.find(x=>x.id===id).name+'" src="assets/decor-'+id+'.webp">').join('')+
  group.map((s,i)=>{const [x,y,w]=spots.get(s.id);return '<button class="room-pet level-'+s.mood+'" style="--x:'+x+'%;--y:'+y+'%;--w:'+w+'%;--delay:-'+i*.71+'s;z-index:'+Math.round(y)+'" data-id="'+s.id+'" data-action="student" aria-label="'+escapeHtml(s.name)+', '+Club.moods[s.mood].name+'"><span class="room-body">'+kitten(s)+(s.mood===4?'<span class="shine">'+ic('sparkle',18)+'</span>':s.mood<=1?'<span class="rest">'+ic(s.mood===0?'moon':'heart',16)+'</span>':'')+(serving?'<img class="serving-bowl" src="assets/food-'+servingFood+'.webp" alt="Meal served">':'')+'</span><span class="nametag">'+escapeHtml(s.name)+'</span></button>';}).join('')+
- '</div><div class="room-foot"><div class="room-legend">'+ic('paw',20)+'<b>'+pets.length+' '+(pets.length===1?'pet':'pets')+'</b><span>•</span><span>'+c.points+' class paw points</span>'+classAwardButton(c)+'</div>'+(total>1?'<div class="pager">'+round('prev-room','Previous group','left',roomPage===0?'disabled':'')+'<span>Group '+(roomPage+1)+' of '+total+'</span>'+round('next-room','Next group','right',roomPage+1>=total?'disabled':'')+'</div>':'')+btn('fullscreen',projectLabel(),'full','btn light')+'</div>'+pantry(c)+(!pets.length?'<p class="empty">Choose pets on the class board to welcome them into this room. '+btn('board','Class board','board','btn light')+'</p>':'')+'</section>';
+ '</div><div class="room-foot"><div class="room-legend">'+ic('paw',20)+'<b>'+pets.length+' '+(pets.length===1?'pet':'pets')+'</b><span>•</span><span>'+c.points+' class paw points</span>'+classAwardButton(c)+'</div>'+(total>1?'<nav class="pager" aria-label="Pet room pages">'+round('prev-room','Previous page','left',roomPage===0?'disabled':'')+'<span>Page '+(roomPage+1)+' of '+total+'</span>'+round('next-room','Next page','right',roomPage+1>=total?'disabled':'')+'</nav>':'')+btn('fullscreen',projectLabel(),'full','btn light')+'</div>'+pantry(c)+(!pets.length?'<p class="empty">Choose pets on the class board to welcome them into this room. '+btn('board','Class board','board','btn light')+'</p>':'')+'</section>';
 }
 function pantry(c) {
   const count=c.meals||0, pets=c.students.filter(Club.petOf).length;
@@ -455,7 +478,12 @@ document.addEventListener('click',e=>{
  case 'remove':c.students=c.students.filter(v=>v.id!==id);if(turns)stopTurns();save();render();openModal('roster');notify('Student removed.');break;
  case 'fullscreen':projector();break;
  case 'motion':data.motion=!data.motion;save();updateUi('motion');break;
- case 'prev-room':case 'next-room':roomPage+=a==='next-room'?1:-1;render();break;
+ case 'prev-room':case 'next-room':{
+   roomPage+=a==='next-room'?1:-1;render();
+   const pager=$('.room-foot .pager');
+   (pager?.querySelector('[data-action="'+a+'"]:enabled')||pager?.querySelector('button:enabled'))?.focus({preventScroll:true});
+   break;
+ }
  case 'export':exportBackup();break;
  case 'import':$('#restore-file').click();break;
  case 'restore-confirm':if(restoreData){NoiseMeter.stop();data=restoreData;restoreData=null;storageBlocked=false;stopTurns();save();filter='all';roomPage=0;shopId='';closeModal();go('board');notify('Classrooms restored.');}break;
@@ -519,7 +547,7 @@ document.addEventListener('submit',e=>{
  }
  stopTurns();turns={minutes:Number(fields.get('minutes')),id:'',end:0,done:[]};turnTimer=setInterval(updateTurnClock,500);shopKind='kitten';closeModal();go('shop');
 });
-narrow.addEventListener('change',()=>{if(view==='room'){roomPage=0;render();}});
+narrow.addEventListener('change',()=>{if(view==='room')render();});
 window.addEventListener('hashchange',()=>{const v=location.hash.slice(1);if(['room','shop','board','noise'].includes(v))go(v);});
 window.addEventListener('storage',e=>{
  if(e.key!==KEY || !e.newValue || e.newValue===lastSaved)return;
