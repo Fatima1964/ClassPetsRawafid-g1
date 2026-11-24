@@ -1,0 +1,277 @@
+/* All wardrobe layers follow the 384 × 368 artwork. Coordinates refer to the full portrait, including its transparent margins. */
+.kitten-art[data-species="kitten"][data-coat="0"] {
+  --brim-x: 53%; --brim-y: 23.2%; --brim-width: 43%; --brim-angle: -18deg;
+  --ear-clip-x: 65.8%; --ear-clip-y: 12.2%; --ear-clip-width: 13.3%; --ear-clip-angle: 13deg;
+  --crown-frame: 0.91; --ballcap-frame: 0.91; --beret-frame: 0.96; --sailor-frame: 0.95;
+  --ear-art: url("assets/kitten-0.webp");
+  --ear-edge: polygon(22% 18%, 31% 18%, 38.5% 21%, 39% 22.5%, 34% 27%, 30.7% 33%, 27% 36%);
+  --collar-x: 53.6%; --collar-y: 53.8%; --collar-width: 25%; --collar-angle: -10deg;
+  --pendant-length: 18.8%; --pendant-angle: -2deg;
+  --pin-x: 48.2%; --pin-y: 63.7%; --pin-angle: -8deg; --scarf-direction: -1;
+  --garment-column: 0%; --garment-row: 0%;
+}
+.kitten-art[data-species="kitten"][data-coat="1"] {
+  --brim-x: 55.8%; --brim-y: 22.8%; --brim-width: 43%; --brim-angle: -10deg;
+  --ear-clip-x: 71.6%; --ear-clip-y: 12.8%; --ear-clip-width: 13.1%; --ear-clip-angle: 13deg;
+  --crown-frame: 0.91; --ballcap-frame: 0.9; --beret-frame: 0.97; --sailor-frame: 0.95;
+  --ear-art: url("assets/kitten-1.webp");
+  --ear-edge: polygon(25.4% 10%, 30% 10%, 36% 13.7%, 41.3% 17%, 39.1% 19.8%, 33% 24%, 29% 29%);
+  --collar-x: 57.6%; --collar-y: 53.1%; --collar-width: 26%; --collar-angle: -7deg;
+  --pendant-length: 19%; --pendant-angle: -2deg;
+  --pin-x: 60.4%; --pin-y: 64%; --pin-angle: -4deg; --scarf-direction: 1;
+  --garment-column: 33.333333%; --garment-row: 0%;
+}
+.kitten-art[data-species="kitten"][data-coat="2"] {
+  --brim-x: 42%; --brim-y: 22.65%; --brim-width: 40%; --brim-angle: -27deg;
+  --ear-clip-x: 44.5%; --ear-clip-y: 12.4%; --ear-clip-width: 13%; --ear-clip-angle: -12deg;
+  --crown-frame: 0.91; --ballcap-frame: 0.93; --beret-frame: 0.95; --sailor-frame: 0.95;
+  --ear-art: url("assets/kitten-2.webp");
+  --ear-edge: polygon(9.5% 20%, 16.5% 21.3%, 22.8% 23.6%, 26.6% 25.8%, 24.4% 29.8%, 20% 37.3%, 17.7% 43%);
+  --collar-x: 44.9%; --collar-y: 53.7%; --collar-width: 25%; --collar-angle: -24deg;
+  --pendant-length: 18.6%; --pendant-angle: -6deg;
+  --pin-x: 49.5%; --pin-y: 61.2%; --pin-angle: -17deg; --scarf-direction: 1;
+  --garment-column: 66.666667%; --garment-row: 0%;
+}
+.kitten-art[data-species="kitten"][data-coat="3"] {
+  --brim-x: 51.5%; --brim-y: 22.5%; --brim-width: 42%; --brim-angle: -18deg;
+  --ear-clip-x: 62.9%; --ear-clip-y: 12.5%; --ear-clip-width: 13.2%; --ear-clip-angle: 12deg;
+  --crown-frame: 0.91; --ballcap-frame: 0.88; --beret-frame: 0.96; --sailor-frame: 0.95;
+  --ear-art: url("assets/kitten-3.webp");
+  --ear-edge: polygon(22.2% 20.7%, 26.7% 19.5%, 35.4% 21.7%, 39.2% 23.4%, 36% 27.4%, 29.4% 35.4%);
+  --collar-x: 55.6%; --collar-y: 55.1%; --collar-width: 26%; --collar-angle: -10deg;
+  --pendant-length: 18.5%; --pendant-angle: -2deg;
+  --pin-x: 58%; --pin-y: 66.1%; --pin-angle: -6deg; --scarf-direction: 1;
+  --garment-column: 100%; --garment-row: 0%;
+}
+.kitten-art[data-species="kitten"][data-coat="4"] {
+  --brim-x: 54.1%; --brim-y: 20.6%; --brim-width: 42%; --brim-angle: -19deg;
+  --ear-clip-x: 66.8%; --ear-clip-y: 12.2%; --ear-clip-width: 13.2%; --ear-clip-angle: 15deg;
+  --crown-frame: 0.89; --ballcap-frame: 0.9; --beret-frame: 0.94; --sailor-frame: 0.93;
+  --ear-art: url("assets/kitten-4.webp");
+  --ear-edge: polygon(24% 14.6%, 31.5% 14.3%, 39% 17.5%, 43.2% 20%, 39.5% 24.4%, 32% 31.4%);
+  --collar-x: 58.3%; --collar-y: 51.7%; --collar-width: 24%; --collar-angle: -13deg;
+  --pendant-length: 18.9%; --pendant-angle: -3deg;
+  --pin-x: 52.0%; --pin-y: 62.3%; --pin-angle: -8deg; --scarf-direction: -1;
+  --garment-column: 0%; --garment-row: 50%;
+}
+.kitten-art[data-species="kitten"][data-coat="5"] {
+  --brim-x: 44%; --brim-y: 21%; --brim-width: 42%; --brim-angle: 19deg;
+  --ear-clip-x: 32%; --ear-clip-y: 12.7%; --ear-clip-width: 13%; --ear-clip-angle: -13deg;
+  --crown-frame: 0.89; --ballcap-frame: 0.9; --beret-frame: 0.96; --sailor-frame: 0.92;
+  --ear-art: url("assets/kitten-5.webp");
+  --ear-edge: polygon(71.7% 16.7%, 65.3% 16.8%, 59.2% 19.3%, 53.4% 22.8%, 56.3% 26.6%, 61.6% 34.5%);
+  --collar-x: 41.5%; --collar-y: 51.6%; --collar-width: 25%; --collar-angle: 10deg;
+  --pendant-length: 18.6%; --pendant-angle: 2deg;
+  --pin-x: 45.7%; --pin-y: 63.5%; --pin-angle: 9deg; --scarf-direction: 1;
+  --garment-column: 33.333333%; --garment-row: 50%;
+}
+.kitten-art[data-species="puppy"] {
+  --brim-x: 55.1%; --brim-y: 17%; --brim-width: 42%; --brim-angle: -5deg;
+  --ear-clip-x: 75.7%; --ear-clip-y: 22%; --ear-clip-width: 13.3%; --ear-clip-angle: 16deg;
+  --crown-frame: 0.87; --ballcap-frame: 0.86; --beret-frame: 0.92; --sailor-frame: 0.91;
+  --collar-x: 56.6%; --collar-y: 47.9%; --collar-width: 27%; --collar-angle: -4deg;
+  --pendant-length: 21%; --pendant-angle: -1deg;
+  --pin-x: 59.4%; --pin-y: 59.5%; --pin-angle: -1deg; --scarf-direction: 1;
+  --garment-column: 66.666667%; --garment-row: 50%;
+}
+.kitten-art[data-species="turtle"] {
+  --brim-x: 51.2%; --brim-y: 12.6%; --brim-width: 33.8%; --brim-angle: -5deg;
+  --ear-clip-x: 61.4%; --ear-clip-y: 7.4%; --ear-clip-width: 9.8%; --ear-clip-angle: 17deg;
+  --crown-frame: 0.88; --ballcap-frame: 0.88; --beret-frame: 0.92; --sailor-frame: 0.91;
+  --collar-x: 52.0%; --collar-y: 48.7%; --collar-width: 19%; --collar-angle: -1deg;
+  --pendant-length: 19.9%; --pendant-angle: 0deg;
+  --pin-x: 56.7%; --pin-y: 64%; --pin-angle: 5deg; --scarf-direction: 1;
+  --garment-column: 100%; --garment-row: 50%;
+}
+.kitten-art[data-species="rabbit"] {
+  --brim-x: 50.6%; --brim-y: 37%; --brim-width: 32%; --brim-angle: -2deg;
+  --ear-clip-x: 65%; --ear-clip-y: 18.4%; --ear-clip-width: 12.4%; --ear-clip-angle: 13deg;
+  --crown-frame: 1; --ballcap-frame: 1; --beret-frame: 1; --sailor-frame: 1;
+  --collar-x: 50.8%; --collar-y: 60.1%; --collar-width: 22%; --collar-angle: -2deg;
+  --pendant-length: 16.7%; --pendant-angle: 0deg;
+  --pin-x: 53.6%; --pin-y: 70.8%; --pin-angle: 0deg; --scarf-direction: 1;
+  --garment-column: 0%; --garment-row: 100%;
+}
+.kitten-art[data-species="monkey"] {
+  --brim-x: 55.5%; --brim-y: 21.5%; --brim-width: 40%; --brim-angle: 4deg;
+  --ear-clip-x: 79%; --ear-clip-y: 32.2%; --ear-clip-width: 13.4%; --ear-clip-angle: 17deg;
+  --crown-frame: 0.92; --ballcap-frame: 0.91; --beret-frame: 0.97; --sailor-frame: 0.96;
+  --collar-x: 56.4%; --collar-y: 52.9%; --collar-width: 24%; --collar-angle: 0deg;
+  --pendant-length: 20.5%; --pendant-angle: 0deg;
+  --pin-x: 57%; --pin-y: 64.4%; --pin-angle: 0deg; --scarf-direction: 1;
+  --garment-column: 33.333333%; --garment-row: 100%;
+}
+.kitten-art[data-species="foal"] {
+  --brim-x: 36.3%; --brim-y: 25%; --brim-width: 28%; --brim-angle: 2deg;
+  --ear-clip-x: 49.2%; --ear-clip-y: 12.3%; --ear-clip-width: 11.4%; --ear-clip-angle: 20deg;
+  --crown-frame: 1; --ballcap-frame: 1; --beret-frame: 1; --sailor-frame: 1;
+  --collar-x: 36.6%; --collar-y: 54.0%; --collar-width: 23%; --collar-angle: 7deg;
+  --pendant-length: 19.2%; --pendant-angle: 2deg;
+  --pin-x: 40.2%; --pin-y: 64.6%; --pin-angle: 13deg; --scarf-direction: 1;
+  --garment-column: 66.666667%; --garment-row: 100%;
+}
+.kitten-art[data-species="parrot"] {
+  --brim-x: 33.4%; --brim-y: 17%; --brim-width: 36.7%; --brim-angle: 3deg;
+  --ear-clip-x: 41.3%; --ear-clip-y: 8.6%; --ear-clip-width: 11.6%; --ear-clip-angle: 12deg;
+  --crown-frame: 0.9; --ballcap-frame: 0.89; --beret-frame: 0.94; --sailor-frame: 0.94;
+  --collar-x: 33.2%; --collar-y: 46.1%; --collar-width: 23.5%; --collar-angle: 1deg;
+  --pendant-length: 19.6%; --pendant-angle: 0deg;
+  --pin-x: 36.6%; --pin-y: 57.9%; --pin-angle: 7deg; --scarf-direction: 1;
+  --garment-column: 100%; --garment-row: 100%;
+}
+
+/* Each item has its own brim depth. Height factors convert the width percentage
+   to the 384:368 portrait's height so all layers share one coordinate space. */
+.kitten-art[data-species] :is(.wear-ballcap, .wear-sailor, .wear-beret, .wear-crown) {
+  left: var(--brim-x);
+  top: calc(var(--brim-y) + var(--brim-offset));
+  width: calc(var(--brim-width) * var(--brim-span));
+  height: calc(var(--brim-width) * var(--brim-rise));
+  object-fit: fill;
+  transform-origin: 50% 100%;
+  transform: translate(-50%, -100%) rotate(var(--brim-angle));
+}
+.wear-ballcap { --brim-span: 1; --brim-rise: .7513; --brim-offset: 0%; }
+.wear-sailor { --brim-span: .98; --brim-rise: .553; --brim-offset: -1.8%; }
+.wear-beret { --brim-span: 1.06; --brim-rise: .5635; --brim-offset: -1%; }
+.wear-crown { --brim-span: .82; --brim-rise: .6052; --brim-offset: -4.7%; }
+
+.kitten-art[data-worn="ballcap"] { --fit-frame: var(--ballcap-frame); }
+.kitten-art[data-worn="sailor"] { --fit-frame: var(--sailor-frame); }
+.kitten-art[data-worn="beret"] { --fit-frame: var(--beret-frame); }
+.kitten-art[data-worn="crown"] { --fit-frame: var(--crown-frame); }
+.kitten-art[data-species]:is([data-worn="ballcap"], [data-worn="sailor"], [data-worn="beret"], [data-worn="crown"]) {
+  scale: var(--fit-frame, 1);
+  transform-origin: 50% 100%;
+}
+
+/* Let the nearer ear emerge beside a fitted brim on the tilted kitten portraits. */
+.kitten-art[data-species="kitten"]:is([data-worn="ballcap"], [data-worn="sailor"], [data-worn="beret"], [data-worn="crown"])::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--ear-art) center / contain no-repeat;
+  clip-path: var(--ear-edge);
+}
+
+.kitten-art[data-species] :is(.wear-flower, .wear-berryclip) {
+  left: var(--ear-clip-x);
+  top: var(--ear-clip-y);
+  width: var(--ear-clip-width);
+  height: auto;
+  transform: translate(-50%, -50%) rotate(var(--ear-clip-angle));
+  transform-origin: center;
+}
+.kitten-art[data-species] .wear-berryclip { width: calc(var(--ear-clip-width) * .93); }
+
+.kitten-art[data-species] :is(.wear-bandana, .wear-scarf, .wear-bow, .wear-butterfly, .wear-medal, .wear-camera, .wear-compass) {
+  left: var(--collar-x);
+  top: var(--collar-y);
+  object-fit: fill;
+  transform-origin: center top;
+  transform: translateX(-50%) rotate(var(--collar-angle));
+}
+.kitten-art[data-species] .wear-bandana,
+.kitten-art[data-species] .wear-scarf {
+  /* Tuck the far side of the collar behind the chin. */
+  clip-path: polygon(0 0, 12% 0, 30% 7%, 51% 12%, 71% 8%, 89% 0, 100% 0, 100% 100%, 0 100%);
+}
+.kitten-art[data-species] .wear-bandana {
+  width: calc(var(--collar-width) * 1.08);
+  height: calc(var(--pendant-length) * .82);
+}
+.kitten-art[data-species] .wear-scarf {
+  width: calc(var(--collar-width) * 1.1);
+  height: calc(var(--pendant-length) * .92);
+  transform: translateX(-50%) rotate(var(--collar-angle)) scaleX(var(--scarf-direction));
+}
+.kitten-art[data-species] .wear-bow,
+.kitten-art[data-species] .wear-butterfly {
+  top: calc(var(--collar-y) + 1.1%);
+  width: calc(var(--collar-width) * .66);
+  height: auto;
+}
+.kitten-art[data-species] :is(.wear-medal, .wear-camera, .wear-compass) {
+  /* Keep the medallion nearly upright on a tilted chest. */
+  top: calc(var(--collar-y) - .8%);
+  height: var(--pendant-length);
+  width: auto;
+  transform: translateX(-50%) rotate(var(--pendant-angle));
+}
+.kitten-art[data-species] .wear-camera {height: calc(var(--pendant-length) * .92);}
+.kitten-art[data-species] :is(.wear-spacepatch, .wear-comet) {
+  left: var(--pin-x);
+  top: var(--pin-y);
+  width: calc(var(--collar-width) * .40);
+  height: auto;
+  transform-origin: center;
+  transform: translate(-50%, -50%) rotate(var(--pin-angle));
+}
+.kitten-art[data-species] .wear-comet {width: calc(var(--collar-width) * .53);}
+
+
+/* The fabric curves around the sides of the neck behind the knot or clasp. */
+.wear-strap {
+  position: absolute;
+  left: var(--collar-x);
+  top: calc(var(--collar-y) - .3%);
+  width: var(--collar-width);
+  height: 6.5%;
+  pointer-events: none;
+  transform: translateX(-50%) rotate(var(--collar-angle));
+  transform-origin: center 15%;
+  background: linear-gradient(180deg, var(--strap-light), var(--strap-shade));
+  clip-path: polygon(0 0, 10% 17%, 28% 34%, 51% 44%, 73% 32%, 89% 16%, 100% 0,
+                     99% 29%, 89% 45%, 73% 61%, 51% 73%, 28% 64%, 10% 46%, 1% 29%);
+}
+[data-worn="bow"] {--strap-light: #d34d4d; --strap-shade: #973134;}
+[data-worn="butterfly"] {--strap-light: #38547b; --strap-shade: #1d314a;}
+[data-worn="medal"] {--strap-light: #5086b5; --strap-shade: #1e4e91; --ribbon-join: 62%;}
+[data-worn="compass"] {--strap-light: #367078; --strap-shade: #173f45; --ribbon-join: 57%;}
+[data-worn="camera"] {--strap-light: #dd8c3c; --strap-shade: #b45320; --ribbon-join: 49%;}
+:is([data-worn="medal"],[data-worn="compass"],[data-worn="camera"]) > .wear-strap {
+  top: calc(var(--collar-y) - 3.3%);
+  height: 4.4%;
+  background: none;
+  clip-path: none;
+  transform: translateX(-50%) rotate(var(--pendant-angle));
+  transform-origin: center bottom;
+}
+:is([data-worn="medal"],[data-worn="compass"],[data-worn="camera"]) > .wear-strap::before,
+:is([data-worn="medal"],[data-worn="compass"],[data-worn="camera"]) > .wear-strap::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(160deg, var(--strap-shade), var(--strap-light));
+  clip-path: polygon(1% 7%, 21% 15%, calc(var(--ribbon-join) - 12%) 38%,
+                     var(--ribbon-join) 57%, calc(var(--ribbon-join) + 7%) 98%,
+                     calc(var(--ribbon-join) - 5%) 98%, calc(var(--ribbon-join) - 14%) 72%,
+                     20% 41%, 2% 26%);
+}
+:is([data-worn="medal"],[data-worn="compass"],[data-worn="camera"]) > .wear-strap::after {
+  left: 50%;
+  transform: scaleX(-1);
+}
+
+/* Each garment tile covers the 272 × 192 chest region at (48, 144) within its portrait. */
+.kitten-art[data-species] > .fitted-garment {
+  display: block;
+  position: absolute;
+  left: 12.5%;
+  top: 39.130435%;
+  width: 70.833333%;
+  height: 52.173913%;
+  transform: none;
+  filter: none;
+  background-size: 400% 300%;
+  background-position: var(--garment-column) var(--garment-row);
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+.fitted-garment.wear-vest { background-image: url("assets/fitted-vest.webp"); }
+.fitted-garment.wear-jersey { background-image: url("assets/fitted-jersey.webp"); }
+.fitted-garment.wear-sweater { background-image: url("assets/fitted-sweater.webp"); }
