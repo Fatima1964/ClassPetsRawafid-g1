@@ -4,9 +4,10 @@ const NoiseMeter = (() => {
   let context, stream, graph, frame, promptTimer, hiddenTimer, attempt=0;
   let offerBrowserLink=false;
   const shhUrl='assets/classroom-shh.wav';
-  const reminderInterval=15000;
+  const reminderInterval=5000;
   let shhBuffer=null, playingShh=null, previewAudio=null, shhUnavailable=false;
   let nextReminder=0, listenAgain=0;
+  let shhVisible=false;
   const calmDescription='A girl and a boy smile with a relaxed ginger kitten sitting between them.';
   const sadDescription='The girl, kitten, and boy look sad. The kitten in the middle covers both ears with its paws.';
   const liveUrl='https://kitten-club-classroom.fatima1964.chatgpt.site/#noise';
@@ -30,17 +31,26 @@ const NoiseMeter = (() => {
       if(token===attempt){shhUnavailable=true;paint();}
     }
   }
+  function showShh(visible){
+    shhVisible=visible;
+    const cue=document.querySelector('#shh-cue');
+    if(cue)cue.hidden=!visible;
+  }
   function stopShh(){
     if(playingShh){
       playingShh.onended=null;playingShh.stop();playingShh.disconnect();playingShh=null;
     }
+    showShh(false);
   }
   function playShh(now){
     if(!shhBuffer||playingShh||context.state!=='running')return;
     const sound=context.createBufferSource();
     sound.buffer=shhBuffer;sound.connect(context.destination);
-    sound.onended=()=>{sound.disconnect();if(playingShh===sound)playingShh=null;};
-    sound.start();playingShh=sound;
+    sound.onended=()=>{
+      sound.disconnect();
+      if(playingShh===sound){playingShh=null;showShh(false);}
+    };
+    sound.start();playingShh=sound;showShh(true);
     nextReminder=now+reminderInterval;
     // Let the sound and its room echo fade before measuring the class again.
     listenAgain=now+shhBuffer.duration*1000+450;
@@ -48,7 +58,14 @@ const NoiseMeter = (() => {
   }
   function previewShh(){
     if(mode!=='off')return;
-    if(!previewAudio)previewAudio=new Audio(shhUrl);
+    if(!previewAudio){
+      const audio=new Audio(shhUrl);
+      audio.onplaying=()=>{if(previewAudio===audio)showShh(true);};
+      audio.onended=audio.onpause=audio.onwaiting=audio.onerror=()=>{
+        if(previewAudio===audio)showShh(false);
+      };
+      previewAudio=audio;
+    }
     previewAudio.currentTime=0;
     previewAudio.play().catch(error=>{
       if(error.name!=='AbortError')notify('The sound preview could not play. Try again.');
@@ -80,7 +97,7 @@ const NoiseMeter = (() => {
     const scene=document.querySelector('#listening-scene');
     if(scene.dataset.soundState!==state){
       scene.dataset.soundState=state;
-      scene.querySelector('.listening-characters').setAttribute('aria-label',state==='above'?sadDescription:calmDescription);
+      scene.querySelector('.listening-portrait').setAttribute('aria-label',state==='above'?sadDescription:calmDescription);
     }
     if(measured){bar.setAttribute('aria-valuenow',String(value));bar.removeAttribute('aria-hidden');}
     else {bar.removeAttribute('aria-valuenow');bar.setAttribute('aria-hidden','true');}
@@ -229,14 +246,17 @@ const NoiseMeter = (() => {
         <p id="sound-note" role="status"></p>
       </div>
       <div id="listening-scene" class="listening-scene" data-sound-state="idle">
-        <div class="listening-characters" role="img" aria-label="${calmDescription}">
-          <span class="pet-floor" aria-hidden="true"></span>
-          <img class="listening-pose girl-pose calm-pose" src="assets/monitor-girl-calm.webp?v=2" alt="" draggable="false">
-          <img class="listening-pose girl-pose sad-pose" src="assets/monitor-girl-sad.webp?v=2" alt="" draggable="false">
-          <img class="listening-pose kitten-pose calm-pose" src="assets/monitor-kitten-calm.webp" alt="" draggable="false">
-          <img class="listening-pose kitten-pose sad-pose" src="assets/monitor-kitten-ears.webp?v=2" alt="" draggable="false">
-          <img class="listening-pose boy-pose calm-pose" src="assets/monitor-child-calm.webp?v=2" alt="" draggable="false">
-          <img class="listening-pose boy-pose sad-pose" src="assets/monitor-child-sad.webp?v=2" alt="" draggable="false">
+        <div class="listening-characters">
+          <div class="listening-portrait" role="img" aria-label="${calmDescription}">
+            <span class="pet-floor" aria-hidden="true"></span>
+            <img class="listening-pose girl-pose calm-pose" src="assets/monitor-girl-calm.webp?v=2" alt="" draggable="false">
+            <img class="listening-pose girl-pose sad-pose" src="assets/monitor-girl-sad.webp?v=2" alt="" draggable="false">
+            <img class="listening-pose kitten-pose calm-pose" src="assets/monitor-kitten-calm.webp" alt="" draggable="false">
+            <img class="listening-pose kitten-pose sad-pose" src="assets/monitor-kitten-ears.webp?v=2" alt="" draggable="false">
+            <img class="listening-pose boy-pose calm-pose" src="assets/monitor-child-calm.webp?v=2" alt="" draggable="false">
+            <img class="listening-pose boy-pose sad-pose" src="assets/monitor-child-sad.webp?v=2" alt="" draggable="false">
+          </div>
+          <span id="shh-cue" class="shh-cue"${shhVisible?'':' hidden'}>Shh!</span>
         </div>
         <div class="listening-copy">
           <div class="sound-source">${ic('mic',17)}<span id="sound-source"></span></div>
@@ -266,6 +286,7 @@ const NoiseMeter = (() => {
   }
   document.addEventListener('visibilitychange',()=>{
     if(document.hidden){
+      previewAudio?.pause();
       // A phone's permission sheet can briefly hide the document during startup.
       if(mode==='live'||mode==='resume'||mode==='muted')fail('Microphone paused while the page was hidden.');
     }else if(graph&&stream){
