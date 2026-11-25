@@ -35,6 +35,8 @@ if(!data)data=Club.initial();
 let view=['board','room','shop','noise'].includes(location.hash.slice(1))?location.hash.slice(1):'board';
 let filter='all',roomPage=0,shopKind='kitten',shopId='',modal='',modalId='',toastTimer,restoreData,returnFocus;
 let servingUntil=0, servingClass='', servingFood='snack';
+let purchaseVisit=null;
+const jumpWaitMs=3000, jumpDurationMs=3000;
 const pantrySelection=new Map();
 let turns=null,turnTimer,storageBlocked=Boolean(readProblem);
 const getClass=()=>data.classes.find(c=>c.id===data.active);
@@ -83,7 +85,8 @@ function nav(){
 }
 function go(v){
  if(view==='noise'&&v!=='noise')NoiseMeter.stop();
- if(turns && v!=='shop'){stopTurns();}
+ if(v!=='room')purchaseVisit=null;
+ if(turns&&v!=='shop'&&!(v==='room'&&purchaseVisit?.classId===data.active))stopTurns();
  if(view!==v){view=v;history.replaceState(null,'','#'+v);window.scrollTo({top:0,behavior:'auto'});}
  render();
 }
@@ -126,6 +129,15 @@ function board(c){
  '<div class="board-foot"><div class="class-points"><span class="coin">'+ic('paw',20)+'</span><div><b>Class paw points</b><span>For food to share with every pet</span></div><strong>'+c.points+'</strong>'+classAwardButton(c)+btn('food-shop','Food pantry','food','btn light')+'</div><div class="foot-actions">'+btn('fullscreen',projectLabel(),'full','btn quiet')+btn('endday',c.lastDay===Club.day()?'Day summary':'End school day','flag','btn light')+'</div></div>';
 }
 const petsPerRoomPage=10;
+function visitPurchasedPet(c,student){
+ const pets=c.students.filter(Club.petOf);
+ roomPage=Math.floor(pets.findIndex(pet=>pet.id===student.id)/petsPerRoomPage);
+ purchaseVisit={classId:c.id,studentId:student.id,jumpAt:performance.now()+jumpWaitMs};
+ go('room');
+ const recipient=document.querySelector('.room-pet[data-id="'+student.id+'"]');
+ recipient?.focus({preventScroll:true});
+ recipient?.scrollIntoView({block:'nearest',behavior:'auto'});
+}
 const narrow=matchMedia('(max-width: 650px)');
 // Each spot is [horizontal center, baseline, width] as a percentage of the room.
 // Special spots have floor alternatives for pets that stay on the ground.
@@ -169,10 +181,19 @@ function room(c){
  const full=group.length>layouts.standard.floor.length;
  const spots=roomSpots(group,full?layouts.full:layouts.standard);
  const serving=servingClass===c.id&&Date.now()<servingUntil;
- return '<section><div class="page-head"><div><div class="context">'+ic('school',17)+escapeHtml(c.name)+'</div><h1>Pet room</h1><p>Visit a pet or share a meal with the whole group.</p></div><div class="actions">'+btn('decor','Room toys','palette','btn light')+btn('food-shop','Food pantry','food','btn primary')+'</div>'+'</div>'+
+ const visit=purchaseVisit?.classId===c.id?purchaseVisit:null;
+ const jumpDelay=visit?visit.jumpAt-performance.now():0;
+ const backToShop=visit?btn('kitten-shop','Back to shop','gift','btn light'):'';
+ const tools=turns&&visit?'<span id="turn-time" aria-label="Shopping time left"></span>'+btn('turn-done','Finish turn','check','btn light'):btn('decor','Room toys','palette','btn light')+btn('food-shop','Food pantry','food','btn primary');
+ return '<section><div class="page-head"><div><div class="context">'+ic('school',17)+escapeHtml(c.name)+'</div><h1>Pet room</h1><p>Visit a pet or share a meal with the whole group.</p></div><div class="actions">'+backToShop+tools+'</div></div>'+
  '<div class="room-stage room-'+mood.tone+(full?' full-room':'')+'"><picture><source media="(max-width:650px)" srcset="assets/room-mobile.webp"><img class="room-bg" src="assets/room.webp" alt="Sunny pet room with a woven bed, climbing tower, and peach rug."></picture><div class="room-glow"></div><div class="room-status">'+ic(mood.icon,17)+mood.name+'</div>'+
  c.placed.map(id=>'<img class="room-decor decor-'+id+'" alt="'+Club.items.find(x=>x.id===id).name+'" src="assets/decor-'+id+'.webp">').join('')+
- group.map((s,i)=>{const [x,y,w]=spots.get(s.id);return '<button class="room-pet level-'+s.mood+'" style="--x:'+x+'%;--y:'+y+'%;--w:'+w+'%;--delay:-'+i*.71+'s;z-index:'+Math.round(y)+'" data-id="'+s.id+'" data-action="student" aria-label="'+escapeHtml(s.name)+', '+Club.moods[s.mood].name+'"><span class="room-body">'+kitten(s)+(s.mood===4?'<span class="shine">'+ic('sparkle',18)+'</span>':s.mood<=1?'<span class="rest">'+ic(s.mood===0?'moon':'heart',16)+'</span>':'')+(serving?'<img class="serving-bowl" src="assets/food-'+servingFood+'.webp" alt="Meal served">':'')+'</span><span class="nametag">'+escapeHtml(s.name)+'</span></button>';}).join('')+
+ group.map((s,i)=>{
+   const [x,y,w]=spots.get(s.id);
+   const jumping=s.id===visit?.studentId&&jumpDelay> -jumpDurationMs;
+   const style='--x:'+x+'%;--y:'+y+'%;--w:'+w+'%;--delay:-'+i*.71+'s;z-index:'+Math.round(y)+(jumping?';--jump-delay:'+jumpDelay+'ms':'');
+   return '<button class="room-pet level-'+s.mood+(jumping?' purchase-jump':'')+'" style="'+style+'" data-id="'+s.id+'" data-action="student" aria-label="'+escapeHtml(s.name)+', '+Club.moods[s.mood].name+'"><span class="room-body">'+kitten(s)+(s.mood===4?'<span class="shine">'+ic('sparkle',18)+'</span>':s.mood<=1?'<span class="rest">'+ic(s.mood===0?'moon':'heart',16)+'</span>':'')+(serving?'<img class="serving-bowl" src="assets/food-'+servingFood+'.webp" alt="Meal served">':'')+'</span><span class="nametag">'+escapeHtml(s.name)+'</span></button>';
+ }).join('')+
  '</div><div class="room-foot"><div class="room-legend">'+ic('paw',20)+'<b>'+pets.length+' '+(pets.length===1?'pet':'pets')+'</b><span>•</span><span>'+c.points+' class paw points</span>'+classAwardButton(c)+'</div>'+(total>1?'<nav class="pager" aria-label="Pet room pages">'+round('prev-room','Previous page','left',roomPage===0?'disabled':'')+'<span>Page '+(roomPage+1)+' of '+total+'</span>'+round('next-room','Next page','right',roomPage+1>=total?'disabled':'')+'</nav>':'')+btn('fullscreen',projectLabel(),'full','btn light')+'</div>'+pantry(c)+(!pets.length?'<p class="empty">Choose pets on the class board to welcome them into this room. '+btn('board','Class board','board','btn light')+'</p>':'')+'</section>';
 }
 function pantry(c) {
@@ -288,6 +309,7 @@ function decorDialog(c){
 async function changePetOrShop(action,classId,studentId,choice){
   function commit(){
     if(storageBlocked)throw Error();
+    if(action==='buy'&&(view!=='shop'||shopKind!=='kitten'||shopId!==studentId))return;
     const raw=localStorage.getItem(KEY);
     const next=Club.readClassrooms(raw&&raw!==lastSaved?raw:JSON.stringify(data));
     const c=next.classes.find(entry=>entry.id===classId);
@@ -328,6 +350,11 @@ async function changePetOrShop(action,classId,studentId,choice){
     }
     const saved=JSON.stringify(next);
     localStorage.setItem(KEY,saved);data=next;lastSaved=saved;storageMessage('');
+    if(purchased){
+      visitPurchasedPet(c,student);
+      notify(message);
+      return;
+    }
     if(action==='buy-food')pantrySelection.set(c.id,choice.meal);
     if(action==='save-look')closeModal();
     if(action==='feed'){
@@ -338,9 +365,6 @@ async function changePetOrShop(action,classId,studentId,choice){
       const root=dlg.open?dlg:document;
       const button=root.querySelector(choice.item?'[data-item="'+choice.item+'"]':'[data-meal="'+choice.meal+'"]');
       button?.focus({preventScroll:true});
-      if(purchased&&view==='shop'&&shopId===studentId){
-        button?.closest('.shop-card')?.querySelector('.kitten-art')?.classList.add('purchase-jump');
-      }
     }
     notify(message);
   }
@@ -489,8 +513,14 @@ function setMood(s,next,from){
 function namesFrom(form){return new FormData(form).get('names').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);}
 function formError(form,msg){form.querySelector('.error').textContent=msg;}
 function stopTurns(){clearInterval(turnTimer);turns=null;turnTimer=null;}
-function finishTurn(){if(!turns?.id)return;turns.done.push(turns.id);turns.id='';turns.end=0;const finished=turns.done.length>=getClass().students.length;if(finished){stopTurns();notify('Every student has had a turn.');}else notify('Time for the next student.');render();}
-function updateTurnClock(){const el=$('#turn-time');if(!turns?.id||!el)return;const sec=Math.max(0,Math.ceil((turns.end-Date.now())/1000));el.textContent=Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');if(!sec)finishTurn();}
+function finishTurn(){if(!turns?.id)return;turns.done.push(turns.id);turns.id='';turns.end=0;const finished=turns.done.length>=getClass().students.length;if(finished){stopTurns();notify('Every student has had a turn.');}else notify('Time for the next student.');if(view==='room'&&purchaseVisit)go('shop');else render();}
+function updateTurnClock(){
+ const el=$('#turn-time');if(!turns?.id||!el)return;
+ const sec=Math.max(0,Math.ceil((turns.end-Date.now())/1000));
+ el.textContent=Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
+ const showingJump=view==='room'&&purchaseVisit&&performance.now()<purchaseVisit.jumpAt+jumpDurationMs;
+ if(!sec&&!showingJump)finishTurn();
+}
 function exportBackup(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='class-pets-'+Club.day()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 function projectLabel(){return document.body.classList.contains('projector')?'Exit projector':'Projector view';}
 function projector(){
