@@ -196,6 +196,7 @@ dialog::backdrop{background:#203a2f58;backdrop-filter:blur(3px)}.dialog-head{dis
 #sound-meter i {display:block;background:var(--meter-fill);width:var(--level,0%);height:100%;border-radius:inherit;transition:width .12s linear;}
 #sound-meter b {position:absolute;left:var(--target);top:-4px;bottom:-4px;width:4px;transform:translateX(-50%);border-radius:3px;background:#364538;box-shadow:0 0 0 1.5px white;}
 .meter-key {display:flex;justify-content:space-between;}
+.shh-hint {margin:10px 0 0;font-size:.9rem;line-height:1.4;color:#40564a;}
 #voice-adjustment {border-bottom:1px solid var(--line);margin-top:8px;}
 #voice-adjustment summary {display:flex;align-items:center;gap:8px;width:fit-content;min-height:46px;cursor:pointer;list-style:none;color:var(--green);font-weight:800;border-radius:9px;}
 #voice-adjustment summary::-webkit-details-marker {display:none;}

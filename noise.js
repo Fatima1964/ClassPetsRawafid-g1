@@ -3,6 +3,10 @@ const NoiseMeter = (() => {
   let mode='off', note='', level=0, loud=false, overSince=0, underSince=0, latestPaint=0;
   let context, stream, graph, frame, promptTimer, hiddenTimer, attempt=0;
   let offerBrowserLink=false;
+  const shhUrl='assets/classroom-shh.wav';
+  const reminderInterval=15000;
+  let shhBuffer=null, playingShh=null, previewAudio=null, shhUnavailable=false;
+  let nextReminder=0, listenAgain=0;
   const calmDescription='A girl and a boy smile with a relaxed ginger kitten sitting between them.';
   const sadDescription='The girl, kitten, and boy look sad. The kitten in the middle covers both ears with its paws.';
   const liveUrl='https://kitten-club-classroom.fatima1964.chatgpt.site/#noise';
@@ -15,8 +19,45 @@ const NoiseMeter = (() => {
     return slider?Number(slider.value):target(getClass());
   }
 
+  async function prepareShh(ctx,token){
+    if(shhBuffer)return;
+    try{
+      const response=await fetch(shhUrl);
+      if(!response.ok)throw Error();
+      const buffer=await ctx.decodeAudioData(await response.arrayBuffer());
+      if(token===attempt)shhBuffer=buffer;
+    }catch{
+      if(token===attempt){shhUnavailable=true;paint();}
+    }
+  }
+  function stopShh(){
+    if(playingShh){
+      playingShh.onended=null;playingShh.stop();playingShh.disconnect();playingShh=null;
+    }
+  }
+  function playShh(now){
+    if(!shhBuffer||playingShh||context.state!=='running')return;
+    const sound=context.createBufferSource();
+    sound.buffer=shhBuffer;sound.connect(context.destination);
+    sound.onended=()=>{sound.disconnect();if(playingShh===sound)playingShh=null;};
+    sound.start();playingShh=sound;
+    nextReminder=now+reminderInterval;
+    // Let the sound and its room echo fade before measuring the class again.
+    listenAgain=now+shhBuffer.duration*1000+450;
+    overSince=0;
+  }
+  function previewShh(){
+    if(mode!=='off')return;
+    if(!previewAudio)previewAudio=new Audio(shhUrl);
+    previewAudio.currentTime=0;
+    previewAudio.play().catch(error=>{
+      if(error.name!=='AbortError')notify('The sound preview could not play. Try again.');
+    });
+  }
   function stop(message='', showLink=false){
     attempt++;
+    if(previewAudio){previewAudio.pause();previewAudio=null;}
+    stopShh();nextReminder=0;listenAgain=0;shhUnavailable=false;
     clearTimeout(promptTimer);clearTimeout(hiddenTimer);
     cancelAnimationFrame(frame);
     if(context)context.onstatechange=null;
@@ -51,7 +92,8 @@ const NoiseMeter = (() => {
     const feedback=document.querySelector('#sound-feedback');
     if(feedback.textContent!==prompt)feedback.textContent=prompt;
     const statusNote=document.querySelector('#sound-note');
-    if(statusNote.textContent!==note)statusNote.textContent=note;
+    const status=measured&&shhUnavailable?'Live meter on. Restart the microphone to reload the “Shh!” sound.':note;
+    if(statusNote.textContent!==status)statusNote.textContent=status;
   }
   function policyBlocksMic(){
     const policy=document.permissionsPolicy||document.featurePolicy;
@@ -74,6 +116,7 @@ const NoiseMeter = (() => {
   }
   function sample(now){
     if(mode!=='live'||!graph)return;
+    if(now<listenAgain){frame=requestAnimationFrame(sample);return;}
     const {analyser,samples}=graph;
     analyser.getFloatTimeDomainData(samples);
     let sum=0;
@@ -85,7 +128,10 @@ const NoiseMeter = (() => {
     if(level>ceiling){
       underSince=0;
       if(!overSince)overSince=now;
-      if(now-overSince>=950)loud=true;
+      if(now-overSince>=950){
+        loud=true;
+        if(now>=nextReminder)playShh(now);
+      }
     }else{
       overSince=0;
       if(!underSince)underSince=now;
@@ -101,6 +147,7 @@ const NoiseMeter = (() => {
     const next=context.state!=='running'?'resume':track.muted?'muted':'live';
     if(next===mode)return;
     cancelAnimationFrame(frame);
+    if(next!=='live'){stopShh();listenAgain=0;}
     mode=next;level=0;loud=false;overSince=0;underSince=0;latestPaint=0;
     note=next==='resume'?'Microphone permission is granted. Tap Resume live audio to activate the sound meter.':next==='muted'?'Your browser has paused microphone input. Check your device’s microphone or restart it.':'Sound is measured on this device. Audio is never recorded or sent.';
     render();
@@ -126,6 +173,7 @@ const NoiseMeter = (() => {
       // Request both operations during the Start tap. An unresolved resume
       // request must never hide a granted microphone behind the permission screen.
       ctx.resume().catch(()=>{});
+      void prepareShh(ctx,token);
       promptTimer=setTimeout(()=>{
         if(token!==attempt||mode!=='asking')return;
         note='Still waiting for your browser. Check for a microphone prompt or open the published monitor directly.';
@@ -154,7 +202,7 @@ const NoiseMeter = (() => {
   }
   function controls(){
     const openLink=(offerBrowserLink||window.top!==window.self)?'<a class="btn light" target="_blank" rel="noopener noreferrer" href="'+liveUrl+'">Open published monitor</a>':'';
-    if(mode==='off')return btn('mic-start','Start microphone','mic','btn primary')+openLink;
+    if(mode==='off')return btn('mic-start','Start microphone','mic','btn primary')+btn('shh-preview','Preview “Shh!”','','btn light')+openLink;
     if(mode==='resume')return btn('mic-resume','Resume live audio','mic','btn primary')+btn('mic-stop','Stop microphone','x','btn light');
     return btn('mic-stop',mode==='asking'?'Cancel':'Stop microphone','x','btn light')+openLink;
   }
@@ -202,6 +250,7 @@ const NoiseMeter = (() => {
           </div>
           <div id="sound-meter" role="meter" aria-label="Relative classroom sound level" aria-valuemin="0" aria-valuemax="100"><i></i><b></b></div>
           <div class="meter-key"><span>0 · Quiet</span><span>100 · Loud</span></div>
+          <p class="shh-hint">A soft “Shh!” plays when voices stay above the target.</p>
         </div>
       </div>
       <details id="voice-adjustment"${keepSettingsOpen?' open':''}>
@@ -226,5 +275,5 @@ const NoiseMeter = (() => {
     }
   });
   window.addEventListener('pagehide',()=>stop());
-  return {page,paint,refresh,start,resume,stop};
+  return {page,paint,refresh,start,resume,stop,previewShh};
 })();

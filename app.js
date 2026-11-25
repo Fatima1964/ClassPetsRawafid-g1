@@ -538,6 +538,7 @@ document.addEventListener('click',e=>{
    void changePetOrShop(a,c.id,id||shopId,{item:el.dataset.item,species:el.dataset.species,meal:a==='feed'?$('#pantry-food')?.value:el.dataset.meal});break;
  }
  case 'mic-start':void NoiseMeter.start();break;
+ case 'shh-preview':NoiseMeter.previewShh();break;
  case 'mic-resume':NoiseMeter.resume();break;
  case 'mic-stop':NoiseMeter.stop();render();break;
  case 'noise-stage':setNoiseStage(el.dataset.stage);break;
