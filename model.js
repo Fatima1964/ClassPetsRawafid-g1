@@ -136,7 +136,7 @@ const Club = (() => {
     for(const s of c.students){const n=dailyEarn(s);s.points+=n;total+=n;s.mood=3;s.neededHelp=false;s.recovered=false;}
     c.points+=room;c.lastDay=today;c.lastSummary={total,room};return c.lastSummary;
   }
-  function useItem(c,s,item){
+  function useItem(c,s,item,action){
     if(!item)return false;
     if(item.kind==='room'){
       if(!c.owned.includes(item.id))c.owned.push(item.id);
@@ -144,13 +144,17 @@ const Club = (() => {
       return true;
     }
     if(!s||!petOf(s))return false;
-    if(!s.owned.includes(item.id)){
-      if(s.points<item.price)return false;
+    const owned=s.owned.includes(item.id);
+    const slot=item.slot==='clothing'?'clothing':'worn';
+    action??=owned?(s[slot]===item.id?'take-off':'wear'):'buy';
+    if(action==='buy'){
+      if(owned||s.points<item.price)return false;
       s.points-=item.price;
       s.owned.push(item.id);
-    }
-    const slot=item.slot==='clothing'?'clothing':'worn';
-    s[slot]=s[slot]===item.id?'':item.id;
+    }else if(!owned)return false;
+    if(action==='buy'||action==='wear')s[slot]=item.id;
+    else if(action==='take-off'&&s[slot]===item.id)s[slot]='';
+    else return false;
     return true;
   }
   function foodStock(c){

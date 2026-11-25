@@ -214,13 +214,21 @@ function foodShop(c){
       btn('buy-food',missing>0?'Need '+missing+' more':'Buy food','','btn primary','data-meal="'+meal.id+'" '+(missing>0?'disabled':''))+'</div></article>';
   }).join('')+'</div>';
 }
-function outfitShop(s){
+function outfitShop(s,wardrobe){
   if(!s)return '<div class="empty"><h3>Add your first student</h3>'+btn('roster','Add students','plus','btn light')+'</div>';
   if(!Club.petOf(s))return '<div class="empty"><h3>'+escapeHtml(s.name)+', choose your pet first</h3>'+btn('choose-pet','Choose a pet','paw','btn primary','data-id="'+s.id+'"')+'</div>';
-  return '<div class="shop-grid">'+Club.items.filter(it=>it.kind==='kitten').map((it,i)=>{
-    const bought=s.owned.includes(it.id), using=(it.slot==='clothing'?s.clothing:s.worn)===it.id, missing=it.price-s.points;
-    const label=bought?(using?'Take off':'Wear it'):missing>0?'Need '+missing+' more':'Buy and wear';
-    return '<article class="shop-card"><div class="product product-'+(i%6)+' outfit-preview" role="img" aria-label="'+escapeHtml(s.name)+'’s '+Club.species[Club.petOf(s)].toLowerCase()+' wearing the '+it.name+'">'+kitten(s,it)+'</div><div class="product-info"><h2>'+it.name+'</h2><span class="product-price">'+(bought?ic('check',16)+(using?'Wearing now':'Owned'):ic('paw',16)+it.price+' personal points')+'</span>'+btn('buy',label,'',bought?'btn light':'btn primary','data-item="'+it.id+'" '+(!bought&&missing>0?'disabled':''))+'</div></article>';
+  const items=Club.items.filter(it=>it.kind==='kitten'&&s.owned.includes(it.id)===wardrobe);
+  if(!items.length){
+    const message=wardrobe?'This pet’s wardrobe is empty.':'This pet owns every outfit and accessory.';
+    const link=wardrobe?btn('kitten-shop','Shop pet outfits','','btn light'):btn('wardrobe','Open wardrobe','','btn light');
+    return '<div class="empty"><h3>'+message+'</h3>'+link+'</div>';
+  }
+  return '<div class="shop-grid">'+items.map((it,i)=>{
+    const using=(it.slot==='clothing'?s.clothing:s.worn)===it.id, missing=it.price-s.points;
+    const action=wardrobe?(using?'take-off':'wear'):'buy';
+    const label=wardrobe?(using?'Take off':'Wear it'):missing>0?'Need '+missing+' more':'Buy and wear';
+    const price=wardrobe?ic('check',16)+(using?'Wearing now':'Owned'):ic('paw',16)+it.price+' personal points';
+    return '<article class="shop-card"><div class="product product-'+(i%6)+' outfit-preview" role="img" aria-label="'+escapeHtml(s.name)+'’s '+Club.species[Club.petOf(s)].toLowerCase()+' wearing the '+it.name+'">'+kitten(s,it)+'</div><div class="product-info"><h2>'+it.name+'</h2><span class="product-price">'+price+'</span>'+btn(action,label,'',wardrobe?'btn light':'btn primary','data-item="'+it.id+'" '+(!wardrobe&&missing>0?'disabled':''))+'</div></article>';
   }).join('')+'</div>';
 }
 function shop(c){
@@ -232,7 +240,10 @@ function shop(c){
   if(turns&&!selected)return header+turnBar+'<div class="turn-grid">'+c.students.map(v=>btn('turn-choose',kitten(v)+'<b>'+escapeHtml(v.name)+'</b>'+(turns.done.includes(v.id)?'<small>Turn finished</small>':''),'','turn-choice','data-id="'+v.id+'" '+(turns.done.includes(v.id)?'disabled':''))).join('')+'</div>';
   const chooser=!isFood&&s&&!turns?'<label class="select-wrap recipient-picker"><span>Dress</span><select id="shop-kitten" aria-label="Choose a student to dress their pet">'+c.students.map(v=>'<option value="'+v.id+'" '+(v.id===s.id?'selected':'')+'>'+escapeHtml(v.name)+'</option>').join('')+'</select>'+ic('down',14)+'</label>':'';
   const balance=isFood?'Class food points':s?escapeHtml(s.name)+'’s personal points':'';
-  return '<section>'+header+turnBar+'<div class="shop-tools"><div class="tabs">'+btn('kitten-shop','Pet outfits','paw',!isFood?'tab selected':'tab')+(!turns?btn('food-shop','Class food','food',isFood?'tab selected':'tab'):'')+'</div><div class="actions">'+chooser+(balance?'<span class="shop-balance">'+balance+' '+wallet(isFood?c.points:s.points)+'</span>':'')+'</div></div>'+(isFood?foodShop(c):outfitShop(s))+'</section>';
+  const tabs=[['kitten','kitten-shop','Pet outfits','paw'],['wardrobe','wardrobe','Wardrobe','bag']];
+  if(!turns)tabs.push(['food','food-shop','Class food','food']);
+  const sections=tabs.map(([kind,action,label,icon])=>btn(action,label,icon,shopKind===kind?'tab selected':'tab','aria-pressed="'+(shopKind===kind)+'"')).join('');
+  return '<section>'+header+turnBar+'<div class="shop-tools"><div class="tabs" role="group" aria-label="Shop sections">'+sections+'</div><div class="actions">'+chooser+(balance?'<span class="shop-balance">'+balance+' '+wallet(isFood?c.points:s.points)+'</span>':'')+'</div></div>'+(isFood?foodShop(c):outfitShop(s,shopKind==='wardrobe'))+'</section>';
 }
 function render(){
  const c=getClass();document.body.classList.toggle('large-roster',c.students.length>12);document.documentElement.classList.toggle('no-motion',!data.motion);nav();
@@ -309,13 +320,14 @@ function decorDialog(c){
 async function changePetOrShop(action,classId,studentId,choice){
   function commit(){
     if(storageBlocked)throw Error();
-    if(action==='buy'&&(view!=='shop'||shopKind!=='kitten'||shopId!==studentId))return;
+    const wardrobeAction=action==='wear'||action==='take-off';
+    if((action==='buy'||wardrobeAction)&&(view!=='shop'||shopKind!==(wardrobeAction?'wardrobe':'kitten')||shopId!==studentId))return;
     const raw=localStorage.getItem(KEY);
     const next=Club.readClassrooms(raw&&raw!==lastSaved?raw:JSON.stringify(data));
     const c=next.classes.find(entry=>entry.id===classId);
     if(!c||next.active!==classId){notify('The classroom changed. Open it again to continue.');return;}
     const student=c.students.find(entry=>entry.id===studentId);
-    let message, purchased=false;
+    let message;
     if(action==='save-look'){
       if(!student||!Object.hasOwn(Club.species,choice.species))return;
       if(!Club.choosePet(c,student,choice.species,choice.look)){
@@ -343,14 +355,17 @@ async function changePetOrShop(action,classId,studentId,choice){
       const item=Club.items.find(entry=>entry.id===choice.item);
       const decor=action==='place-toy';
       if(!item||item.kind!==(decor?'room':'kitten')||(turns&&(decor||turns.id!==studentId)))return;
-      purchased=action==='buy'&&Boolean(student)&&!student.owned.includes(item.id);
-      if(!Club.useItem(c,student,item)){notify('Check the student’s pet and personal points.');return;}
+      if(!Club.useItem(c,student,item,action)){
+        data=next;lastSaved=raw;updateUi();
+        notify(action==='buy'&&student?.owned.includes(item.id)?'This item is already in the pet’s wardrobe.':'Check the student’s wardrobe and personal points.');
+        return;
+      }
       const wearing=decor?c.placed.includes(item.id):(item.slot==='clothing'?student.clothing:student.worn)===item.id;
       message=wearing?(decor?item.name+' is in the room.':student.name+'’s pet is wearing the '+item.name+'.'):item.name+' put away.';
     }
     const saved=JSON.stringify(next);
     localStorage.setItem(KEY,saved);data=next;lastSaved=saved;storageMessage('');
-    if(purchased){
+    if(action==='buy'){
       visitPurchasedPet(c,student);
       notify(message);
       return;
@@ -549,7 +564,8 @@ document.addEventListener('click',e=>{
  case 'finish-day':
    void awardPoints(a,el.dataset.class || c.id,id);
    break;
- case 'dress':closeModal();shopKind='kitten';shopId=id;go('shop');break;
+ case 'dress':closeModal();shopKind=s?.owned.length?'wardrobe':'kitten';shopId=id;go('shop');break;
+ case 'wardrobe':shopKind='wardrobe';go('shop');focusAttr('wardrobe');break;
  case 'food-shop':shopKind='food';go('shop');break;
  case 'kitten-shop':shopKind='kitten';go('shop');break;
  case 'pick-species':{
@@ -569,7 +585,7 @@ document.addEventListener('click',e=>{
  case 'save-look':
    if(modal==='pick-look'&&lookDraft&&id===modalId)void changePetOrShop(a,c.id,id,{species:lookDraft.kind,look:lookDraft.look});
    break;
- case 'buy': case 'buy-food': case 'feed': case 'place-toy':{
+ case 'buy': case 'wear': case 'take-off': case 'buy-food': case 'feed': case 'place-toy':{
    void changePetOrShop(a,c.id,id||shopId,{item:el.dataset.item,species:el.dataset.species,meal:a==='feed'?$('#pantry-food')?.value:el.dataset.meal});break;
  }
  case 'mic-start':void NoiseMeter.start();break;
@@ -596,7 +612,7 @@ document.addEventListener('click',e=>{
  case 'export':exportBackup();break;
  case 'import':$('#restore-file').click();break;
  case 'restore-confirm':if(restoreData){NoiseMeter.stop();data=restoreData;restoreData=null;storageBlocked=false;stopTurns();save();filter='all';roomPage=0;shopId='';closeModal();go('board');notify('Classrooms restored.');}break;
- case 'turn-choose':if(turns&&!turns.id&&!turns.done.includes(id)&&s){turns.id=id;turns.end=Date.now()+turns.minutes*60000;shopId=id;render();}break;
+ case 'turn-choose':if(turns&&!turns.id&&!turns.done.includes(id)&&s){turns.id=id;turns.end=Date.now()+turns.minutes*60000;shopKind='kitten';shopId=id;render();}break;
  case 'turn-done':finishTurn();break;
  case 'stop-turns':stopTurns();render();break;
  }
