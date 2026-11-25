@@ -293,7 +293,7 @@ async function changePetOrShop(action,classId,studentId,choice){
     const c=next.classes.find(entry=>entry.id===classId);
     if(!c||next.active!==classId){notify('The classroom changed. Open it again to continue.');return;}
     const student=c.students.find(entry=>entry.id===studentId);
-    let message;
+    let message, purchased=false;
     if(action==='save-look'){
       if(!student||!Object.hasOwn(Club.species,choice.species))return;
       if(!Club.choosePet(c,student,choice.species,choice.look)){
@@ -321,6 +321,7 @@ async function changePetOrShop(action,classId,studentId,choice){
       const item=Club.items.find(entry=>entry.id===choice.item);
       const decor=action==='place-toy';
       if(!item||item.kind!==(decor?'room':'kitten')||(turns&&(decor||turns.id!==studentId)))return;
+      purchased=action==='buy'&&Boolean(student)&&!student.owned.includes(item.id);
       if(!Club.useItem(c,student,item)){notify('Check the student’s pet and personal points.');return;}
       const wearing=decor?c.placed.includes(item.id):(item.slot==='clothing'?student.clothing:student.worn)===item.id;
       message=wearing?(decor?item.name+' is in the room.':student.name+'’s pet is wearing the '+item.name+'.'):item.name+' put away.';
@@ -335,7 +336,11 @@ async function changePetOrShop(action,classId,studentId,choice){
     if(action==='save-look')focusAttr('choose-pet',studentId);
     else if(choice.item||choice.meal){
       const root=dlg.open?dlg:document;
-      root.querySelector(choice.item?'[data-item="'+choice.item+'"]':'[data-meal="'+choice.meal+'"]')?.focus({preventScroll:true});
+      const button=root.querySelector(choice.item?'[data-item="'+choice.item+'"]':'[data-meal="'+choice.meal+'"]');
+      button?.focus({preventScroll:true});
+      if(purchased&&view==='shop'&&shopId===studentId){
+        button?.closest('.shop-card')?.querySelector('.kitten-art')?.classList.add('purchase-jump');
+      }
     }
     notify(message);
   }

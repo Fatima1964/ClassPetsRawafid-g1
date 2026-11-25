@@ -49,6 +49,14 @@ dialog::backdrop{background:#203a2f58;backdrop-filter:blur(3px)}.dialog-head{dis
 .shop-balance .wallet { margin-left: 4px; }
 .recipient-picker > span { color: var(--muted); }
 .outfit-preview .kitten-art { width: min(75%, 190px, 16vw); height: auto; }
+.purchase-jump {transform-origin:50% 95%;animation:pet-purchase-jump 1s ease-in-out;}
+@keyframes pet-purchase-jump {
+  0%, 54%, 100% {transform:none;}
+  11%, 49% {transform:scale(1.045,.94);}
+  30% {transform:translateY(-14%) scale(.985,1.025);}
+  70% {transform:translateY(-9%);}
+  86% {transform:scale(1.025,.965);}
+}
 .outfit-preview .pet-img {width: 100%; max-width: 100%; height: 100%; max-height: none; }
 .outfit-preview .wear {max-width: none; max-height: none; filter: drop-shadow(0 1px 1px #492b3525);}
 @media (max-width:650px) {
